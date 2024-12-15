@@ -1,7 +1,7 @@
 const https = require('https');
-const inputArray = ["6447344", "6447344", "3052068", "3052068", "3052068"];
-const url = "https://s3.eu-west-1.amazonaws.com/hackajob-assets1.p.hackajob/challenges/sainsbury_products/products.json";
-
+require('dotenv').config();
+const url = process.env.URL;
+const inputArray = process.env.INPUT_ARRAY.split(',');
 
 function fetchData(url,callback){
     console.log("Fetch Data called!")
@@ -29,9 +29,34 @@ function fetchData(url,callback){
 function processProducts(inputArray, productData){
     const productMap = {};
 
+    let lines = [];
+    let total = 0
+    let total_item_count = 0
+
     inputArray.forEach(uid =>{
-        console.log(uid)
+        const product = productData.find(item => item.product_uid === uid);
+        if (product){
+            if (!productMap[uid]){
+                productMap[uid] = {
+                    uid: uid,
+                    quantity: 1,
+                    subtotal:0
+                }
+            }
+            else{
+                productMap[uid].quantity += 1
+                productMap[uid].subtotal = productMap[uid].quantity*product.retail_price.price
+            }
+        }
     })
+
+    for (const uid in productMap){
+        const product = productMap[uid]
+        lines.push(product);
+        total_item_count += product.quantity
+        total += product.subtotal
+    }
+    return {"lines": lines,"total_item_count":total_item_count,"total": total};
 }
 
 fetchData(url, (error,productData) =>{
@@ -39,7 +64,7 @@ fetchData(url, (error,productData) =>{
         console.log("Error!", error)
     } 
     else{
-        console.log("Processed corectly")
-        console.log(productData)
+        console.log("Product Data loaded correctly")
+        console.log(processProducts(inputArray, productData));
     }
 })
